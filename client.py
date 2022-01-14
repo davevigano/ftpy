@@ -3,6 +3,7 @@ import PySimpleGUI as gui
 import ftplib as ftp
 import os
 import getpass
+import ctypes
 
 # global variables
 system_user = getpass.getuser()
@@ -12,8 +13,20 @@ file_paths_to_upload = []
 file_on_server = {}
 download_done = False
 delete_done = False
+saved_servers_file_is_present = False
+
 if 'saved_servers.csv' not in os.listdir():
-    open('saved_servers.csv', 'w')
+    try:
+        with open('saved_servers.csv', 'w') as file:
+            saved_servers_file_is_present = True
+    except:
+        saved_servers_file_is_present = False
+        ctypes.windll.user32.MessageBoxW(0, "The program wasn't able to create the \'saved_servers.cfg\', the function will be disabled", "Error", 0)
+else:
+    saved_servers_file_is_present = True
+
+is_duplicate = False
+saved_servers = {}
 
 # functions
 def open_upload_page():
@@ -37,7 +50,7 @@ def open_upload_page():
     upload_window.close()
 
 def open_filemanager_page():
-    global file_on_server, system_user, download_done
+    global file_on_server, system_user, download_done, delete_done
     if ftp_session.nlst() == []:
         manager_layout = [
             [gui.Text('The server is empty')]
@@ -77,6 +90,7 @@ def open_filemanager_page():
                         download_done = True
                 if download_done is True:
                     gui.Popup('Download done', keep_on_top = True)
+                    os.system('cd C:/Users/' + system_user + '/Downloads/ && start .')
                 else:
                     gui.Popup('No file selected', keep_on_top = True, button_color = '#FF0000')
                 download_done = False
@@ -95,14 +109,67 @@ def open_filemanager_page():
                 break
         manager_window.close()
 
+def open_saved_data_page():
+    global delete_done
+    is_empty = False
+    with open('saved_servers.csv', 'r') as file:
+        for line in file:
+            if line == '\n':
+                is_empty = True
+            else:
+                is_empty = False
+    if is_empty is True:
+        saved_data_layout = [
+            [gui.Text('The file is empty')]
+        ]
+        saved_data_window = gui.Window('Saved Data', saved_data_layout, size = (300,300), keep_on_top = True, modal = True)
+        while True:
+            event, values = saved_data_window.read()
+            if event == gui.WINDOW_CLOSED:
+                break
+        saved_data_window.close()
+    else:
+        saved_data_layout = [[gui.Button('SELECT ALL'), gui.Button('DESELECT ALL')]]
+        with open('saved_servers.csv', 'r') as file:
+            for line in file:
+                if line != '\n':
+                    saved_data_layout.append([gui.Checkbox(line, enable_events = True, key = line)])
+                    saved_servers.update({line : False})
+        saved_data_layout.append([gui.Button('IMPORT'), gui.Button('DELETE')])
+        saved_data_window = gui.Window('Saved Data', saved_data_layout, size = (300,300), keep_on_top = True, modal = True)
+        while True:
+            event, values = saved_data_window.read()
+            if event == 'SELECT ALL':
+                with open('saved_servers.csv', 'r') as file:
+                    for line in file:
+                        saved_data_window[line].update(True)
+                        saved_servers[line] = True
+            if event == 'DESELECT ALL':
+                with open('saved_servers.csv', 'r') as file:
+                    for line in file:
+                        saved_data_window[line].update(False)
+                        saved_servers[line] = False
+            # if event == 'DELETE':
+                
+            #         if delete_done is True:
+            #             gui.Popup('Delete done', keep_on_top = True)
+            #         else:
+            #             gui.Popup('No data selected', keep_on_top = True, button_color = '#FF0000')
+            #         delete_done = False
+            #     break
+            if event == gui.WINDOW_CLOSED:
+                break
+        is_empty = False
+        saved_data_window.close()
+
 # gui
 main_layout = [
     [gui.Text('Address: ', key = '-ADDRESSLABEL-'), gui.InputText(key = '-ADDRESS-', size = (20,1), disabled_readonly_background_color = '#808080')],
     [gui.Text('Username: ', key = '-UNAMELABEL-'), gui.InputText(key = '-UNAME-', size = (20,1), disabled_readonly_background_color = '#808080')],
     [gui.Text('Password: ', key = '-PSWLABEL-'), gui.InputText(key = '-PSW-', size = (20,1), disabled_readonly_background_color = '#808080')],
     [gui.Button('UPLOAD', disabled = True), gui.Button('FILE MANAGER', disabled = True)],
-    [gui.Button('CONNECT'), gui.Button('DISCONNECT', disabled = True) ,gui.Button('QUIT')],
-    [gui.Button('SAVE SERVER')],
+    [gui.Button('CONNECT'), gui.Button('DISCONNECT', disabled = True), gui.Button('QUIT')],
+    [gui.Button('SAVE CONNECTION DATA', disabled = not saved_servers_file_is_present), [gui.Button('SEE SAVED DATA', disabled = not saved_servers_file_is_present)]],
     [gui.Text(key = '-STATUS-', size = (30,None))]
 ]
 
@@ -110,7 +177,6 @@ main_window = gui.Window('Main Page', main_layout, size = (300,400))
 
 while True:
     event, values = main_window.read()
-    
     if event == 'CONNECT':
         if values['-ADDRESS-'] != '' and values['-UNAME-'] != '' and values['-PSW-'] != '':
             try:
@@ -160,9 +226,24 @@ while True:
             main_window['-UNAME-'].update(disabled = False)
             main_window['-PSW-'].update(disabled = False)
     
-    if event == 'SAVE SERVER':
+    if event == 'SAVE CONNECTION DATA':
         if values['-ADDRESS-'] != '' and values['-UNAME-'] != '' and values['-PSW-'] != '':
-            print('Work in progress...')
+            with open('saved_servers.csv', 'r') as file:
+                for line in file:
+                    if line.startswith(values['-ADDRESS-'] + ',' + values['-UNAME-']):
+                        is_duplicate = True
+            if is_duplicate is False:
+                with open('saved_servers.csv', 'a') as file:
+                    file.write('\n' + values['-ADDRESS-'] + ',' + values['-UNAME-'] + ',' + values['-PSW-'])
+                    gui.Popup('Saved', keep_on_top = True)
+            else:
+                gui.Popup('Connection data is already saved', keep_on_top = True, button_color = '#FF0000')
+        else:
+            gui.Popup('Connection data is not complete', keep_on_top = True, button_color = '#FF0000')
+        is_duplicate = False
+
+    if event == 'SEE SAVED DATA':
+        open_saved_data_page()
             
     if event == gui.WINDOW_CLOSED or event == 'QUIT':
         if ftp_session is not None:
