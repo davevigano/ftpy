@@ -27,6 +27,7 @@ else:
 
 is_duplicate = False
 saved_servers = {}
+server_to_import = []
 
 # functions
 def open_upload_page():
@@ -101,24 +102,29 @@ def open_filemanager_page():
                         delete_done = True
                 if delete_done is True:
                     gui.Popup('Delete done', keep_on_top = True)
+                    delete_done = False
+                    break
                 else:
                     gui.Popup('No file selected', keep_on_top = True, button_color = '#FF0000')
                 delete_done = False
-                break
             if event == gui.WINDOW_CLOSED:
                 break
         manager_window.close()
 
 def open_saved_data_page():
-    global delete_done
+    global delete_done, server_to_import, saved_servers
     full_lines_counter = 0
-    with open('saved_servers.csv', 'r') as file:
-        for line in file:
-            if line != '\n':
-                full_lines_counter += 1
+    try:
+        with open('saved_servers.csv', 'r') as file:
+            for line in file:
+                if line != '\n':
+                    full_lines_counter += 1
+    except:
+        ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+        return
     if full_lines_counter == 0:
         saved_data_layout = [
-            [gui.Text('The file is empty')]
+            [gui.Text('You have no server saved')]
         ]
         saved_data_window = gui.Window('Saved Data', saved_data_layout, size = (300,300), keep_on_top = True, modal = True)
         while True:
@@ -128,42 +134,84 @@ def open_saved_data_page():
         saved_data_window.close()
     else:
         saved_data_layout = [[gui.Button('SELECT ALL'), gui.Button('DESELECT ALL')]]
-        with open('saved_servers.csv', 'r') as file:
-            for line in file:
-                if line != '\n':
-                    saved_data_layout.append([gui.Checkbox((line.split()[0]), enable_events = True, key = line)])
-                    saved_servers.update({(line.split()[0]) : False})
-        saved_data_layout.append([gui.Button('IMPORT'), gui.Button('DELETE')])
+        try:
+            with open('saved_servers.csv', 'r') as file:
+                for line in file:
+                    if line != '\n':
+                        saved_data_layout.append([gui.Checkbox((line.split()[0]), enable_events = True, key = line.split()[0])])
+                        saved_servers.update({(line.split()[0]) : False})
+        except:
+            ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+            return
+        saved_data_layout.append([gui.Button('USE'), gui.Button('DELETE')])
         saved_data_window = gui.Window('Saved Data', saved_data_layout, size = (300,300), keep_on_top = True, modal = True)
         while True:
             event, values = saved_data_window.read()
+            if event in saved_servers:
+                if saved_servers[event] == False:
+                    saved_servers[event] = True
+                else:
+                    saved_servers[event] = False
             if event == 'SELECT ALL':
-                with open('saved_servers.csv', 'r') as file:
-                    for line in file:
-                        saved_data_window[line].update(True)
-                        saved_servers[line] = True
+                try:
+                    with open('saved_servers.csv', 'r') as file:
+                        for line in file:
+                            if line != '\n':
+                                saved_data_window[line.split()[0]].update(True)
+                                saved_servers[line.split()[0]] = True
+                except:
+                    ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
             if event == 'DESELECT ALL':
-                with open('saved_servers.csv', 'r') as file:
-                    for line in file:
-                        saved_data_window[line].update(False)
-                        saved_servers[line] = False
+                try:
+                    with open('saved_servers.csv', 'r') as file:
+                        for line in file:
+                            if line != '\n':
+                                saved_data_window[line.split()[0]].update(False)
+                                saved_servers[line.split()[0]] = False
+                except:
+                    ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
             if event == 'DELETE':
-                with open('saved_servers.csv', 'r') as file:
-                    saved_server_content = file.read()
+                try:
+                    with open('saved_servers.csv', 'r') as file:
+                        saved_server_content = file.read()
+                except:
+                    ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+                    break
                 saved_servers_list = saved_server_content.split('\n')
                 for line in saved_servers:
                     if saved_servers[line] == True:
                         saved_servers_list.remove(line)
                         delete_done = True
-                with open('saved_servers.csv', 'w') as file:
-                    for line in saved_servers_list:
-                        file.write(line + '\n')
+                try:
+                    with open('saved_servers.csv', 'w') as file:
+                        for line in saved_servers_list:
+                            file.write(line + '\n')
+                except:
+                    ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+                    break
                 if delete_done is True:
                     gui.Popup('Delete done', keep_on_top = True)
+                    delete_done = False
+                    break
                 else:
-                    gui.Popup('No file selected', keep_on_top = True, button_color = '#FF0000')
+                    gui.Popup('No server selected', keep_on_top = True, button_color = '#FF0000')
                 delete_done = False
-                break
+            if event == 'USE':
+                selected_voices_counter = 0
+                for line in saved_servers:
+                    if saved_servers[line] == True:
+                        selected_voices_counter += 1
+                if selected_voices_counter == 1:
+                    for line in saved_servers:
+                        if saved_servers[line] == True:
+                            server_to_import_str = line
+                    server_to_import = server_to_import_str.split(',')
+                    saved_data_window.close()
+                    return 'USE'
+                elif selected_voices_counter == 0:
+                    gui.Popup('No server selected', keep_on_top = True, button_color = '#FF0000')
+                else:
+                    gui.Popup('Do not select more than one server', keep_on_top = True, button_color = '#FF0000')
             if event == gui.WINDOW_CLOSED:
                 break
         is_empty = False
@@ -207,9 +255,12 @@ while True:
             if selected_file_paths is not None:
                 for filepath in file_paths_to_upload:
                     if os.path.basename(filepath) not in ftp_session.nlst():
-                        with open(filepath, 'rb') as file_to_upload:
-                            ftp_session.storbinary('STOR ' + os.path.basename(filepath), file_to_upload)
-                        main_window['-STATUS-'].update(main_window['-STATUS-'].get() + '\n' + os.path.basename(filepath) + ' uploaded')
+                        try:
+                            with open(filepath, 'rb') as file_to_upload:
+                                ftp_session.storbinary('STOR ' + os.path.basename(filepath), file_to_upload)
+                            main_window['-STATUS-'].update(main_window['-STATUS-'].get() + '\n' + os.path.basename(filepath) + ' uploaded')
+                        except:
+                            ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
                     else:
                         main_window['-STATUS-'].update(main_window['-STATUS-'].get() + '\n' + os.path.basename(filepath) + ' already on server')
             else:
@@ -235,14 +286,22 @@ while True:
     
     if event == 'SAVE CONNECTION DATA':
         if values['-ADDRESS-'] != '' and values['-UNAME-'] != '' and values['-PSW-'] != '':
-            with open('saved_servers.csv', 'r') as file:
-                for line in file:
-                    if line.startswith(values['-ADDRESS-'] + ',' + values['-UNAME-']):
-                        is_duplicate = True
+            try:
+                with open('saved_servers.csv', 'r') as file:
+                    for line in file:
+                        if line.startswith(values['-ADDRESS-'] + ',' + values['-UNAME-']):
+                            is_duplicate = True
+            except:
+                ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+                break
             if is_duplicate is False:
-                with open('saved_servers.csv', 'a') as file:
-                    file.write('\n' + values['-ADDRESS-'] + ',' + values['-UNAME-'] + ',' + values['-PSW-'])
-                    gui.Popup('Saved', keep_on_top = True)
+                try:
+                    with open('saved_servers.csv', 'a') as file:
+                        file.write('\n' + values['-ADDRESS-'] + ',' + values['-UNAME-'] + ',' + values['-PSW-'])
+                        gui.Popup('Saved', keep_on_top = True)
+                except:
+                    ctypes.windll.user32.MessageBoxW(0, "Failed to open the file", "Error", 0)
+                    break
             else:
                 gui.Popup('Connection data is already saved', keep_on_top = True, button_color = '#FF0000')
         else:
@@ -250,7 +309,10 @@ while True:
         is_duplicate = False
 
     if event == 'SEE SAVED DATA':
-        open_saved_data_page()
+        if open_saved_data_page() == 'USE':
+            main_window['-ADDRESS-'].update(server_to_import[0])
+            main_window['-UNAME-'].update(server_to_import[1])
+            main_window['-PSW-'].update(server_to_import[2])
             
     if event == gui.WINDOW_CLOSED or event == 'QUIT':
         if ftp_session is not None:
