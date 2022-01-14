@@ -111,14 +111,12 @@ def open_filemanager_page():
 
 def open_saved_data_page():
     global delete_done
-    is_empty = False
+    full_lines_counter = 0
     with open('saved_servers.csv', 'r') as file:
         for line in file:
-            if line == '\n':
-                is_empty = True
-            else:
-                is_empty = False
-    if is_empty is True:
+            if line != '\n':
+                full_lines_counter += 1
+    if full_lines_counter == 0:
         saved_data_layout = [
             [gui.Text('The file is empty')]
         ]
@@ -133,8 +131,8 @@ def open_saved_data_page():
         with open('saved_servers.csv', 'r') as file:
             for line in file:
                 if line != '\n':
-                    saved_data_layout.append([gui.Checkbox(line, enable_events = True, key = line)])
-                    saved_servers.update({line : False})
+                    saved_data_layout.append([gui.Checkbox((line.split()[0]), enable_events = True, key = line)])
+                    saved_servers.update({(line.split()[0]) : False})
         saved_data_layout.append([gui.Button('IMPORT'), gui.Button('DELETE')])
         saved_data_window = gui.Window('Saved Data', saved_data_layout, size = (300,300), keep_on_top = True, modal = True)
         while True:
@@ -149,14 +147,23 @@ def open_saved_data_page():
                     for line in file:
                         saved_data_window[line].update(False)
                         saved_servers[line] = False
-            # if event == 'DELETE':
-                
-            #         if delete_done is True:
-            #             gui.Popup('Delete done', keep_on_top = True)
-            #         else:
-            #             gui.Popup('No data selected', keep_on_top = True, button_color = '#FF0000')
-            #         delete_done = False
-            #     break
+            if event == 'DELETE':
+                with open('saved_servers.csv', 'r') as file:
+                    saved_server_content = file.read()
+                saved_servers_list = saved_server_content.split('\n')
+                for line in saved_servers:
+                    if saved_servers[line] == True:
+                        saved_servers_list.remove(line)
+                        delete_done = True
+                with open('saved_servers.csv', 'w') as file:
+                    for line in saved_servers_list:
+                        file.write(line + '\n')
+                if delete_done is True:
+                    gui.Popup('Delete done', keep_on_top = True)
+                else:
+                    gui.Popup('No file selected', keep_on_top = True, button_color = '#FF0000')
+                delete_done = False
+                break
             if event == gui.WINDOW_CLOSED:
                 break
         is_empty = False
