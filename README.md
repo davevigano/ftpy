@@ -16,3 +16,6 @@ A simple and light FTP client with every basic functionality you might need.
 * Install the <code>requirements.txt</code> file &#8594; <code>pip install -r requirements.txt</code>
 * Run the Python script &#8594; <code>python client.py</code>
   * the first time you start the script, a <b>.csv</b> file will be generated
+
+# Notes
+* At the moment, the client does not manage folders
