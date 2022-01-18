@@ -219,16 +219,17 @@ def open_saved_data_page():
 
 # gui
 main_layout = [
-    [gui.Text('Address: ', key = '-ADDRESSLABEL-'), gui.InputText(key = '-ADDRESS-', size = (20,1), disabled_readonly_background_color = '#808080')],
-    [gui.Text('Username: ', key = '-UNAMELABEL-'), gui.InputText(key = '-UNAME-', size = (20,1), disabled_readonly_background_color = '#808080')],
-    [gui.Text('Password: ', key = '-PSWLABEL-'), gui.InputText(key = '-PSW-', size = (20,1), disabled_readonly_background_color = '#808080')],
+    [gui.Text('Address: ', key = '-ADDRESSLABEL-'), gui.InputText(key = '-ADDRESS-', size = (30,1), disabled_readonly_background_color = '#808080')],
+    [gui.Text('Username: ', key = '-UNAMELABEL-'), gui.InputText(key = '-UNAME-', size = (30,1), disabled_readonly_background_color = '#808080')],
+    [gui.Text('Password: ', key = '-PSWLABEL-'), gui.InputText(key = '-PSW-', size = (30,1), disabled_readonly_background_color = '#808080')],
+    [gui.Button('CONNECT'), gui.Button('DISCONNECT', disabled = True)],
     [gui.Button('UPLOAD', disabled = True), gui.Button('FILE MANAGER', disabled = True)],
-    [gui.Button('CONNECT'), gui.Button('DISCONNECT', disabled = True), gui.Button('QUIT')],
-    [gui.Button('SAVE CONNECTION DATA', disabled = not saved_servers_file_is_present), [gui.Button('SEE SAVED DATA', disabled = not saved_servers_file_is_present)]],
-    [gui.Text(key = '-STATUS-', size = (30,None))]
+    [gui.Button('SAVE CONNECTION DATA', disabled = not saved_servers_file_is_present), gui.Button('SEE SAVED DATA', disabled = not saved_servers_file_is_present)],
+    [gui.Text(key = '-STATUS-', size = (30,None))],
+    [gui.Button('QUIT')]
 ]
 
-main_window = gui.Window('Main Page', main_layout, size = (300,400))
+main_window = gui.Window('Main Page', main_layout)
 
 while True:
     event, values = main_window.read()
