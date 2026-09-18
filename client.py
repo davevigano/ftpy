@@ -1,5 +1,5 @@
 # imports
-import PySimpleGUI as gui
+import FreeSimpleGUI as gui
 import ftplib as ftp
 import os
 import getpass
@@ -32,6 +32,7 @@ server_to_import = []
 # functions
 def open_upload_page():
     global selected_file_paths, file_paths_to_upload
+    selected_file_paths = None
     upload_layout = [
         [gui.FilesBrowse(key = '-BROWSE-', target = '-HIDDENFILENAME-'), gui.Button('UPLOAD FILE')],
         [gui.Text(key = '-FILENAME-')],
@@ -52,6 +53,7 @@ def open_upload_page():
 
 def open_filemanager_page():
     global file_on_server, system_user, download_done, delete_done
+    file_on_server = {}
     if ftp_session.nlst() == []:
         manager_layout = [
             [gui.Text('The server is empty')]
@@ -85,10 +87,15 @@ def open_filemanager_page():
                     manager_window[filename].update(False)
                     file_on_server[filename] = False
             if event == 'DOWNLOAD':
-                for filename in file_on_server:
+                for filename in list(file_on_server):
                     if file_on_server[filename] == True:
-                        ftp_session.retrbinary('RETR ' + filename, open('C:/Users/' + system_user + '/Downloads/' + filename, 'wb').write)
-                        download_done = True
+                        try:
+                            download_path = 'C:/Users/' + system_user + '/Downloads/' + filename
+                            with open(download_path, 'wb') as file_to_download:
+                                ftp_session.retrbinary('RETR ' + filename, file_to_download.write)
+                            download_done = True
+                        except Exception:
+                            ctypes.windll.user32.MessageBoxW(0, "Failed to download " + filename, "Error", 0)
                 if download_done is True:
                     gui.Popup('Download done', keep_on_top = True)
                     os.system('cd C:/Users/' + system_user + '/Downloads/ && start .')
@@ -96,10 +103,13 @@ def open_filemanager_page():
                     gui.Popup('No file selected', keep_on_top = True, button_color = '#FF0000')
                 download_done = False
             if event == 'DELETE':
-                for filename in file_on_server:
+                for filename in list(file_on_server):
                     if file_on_server[filename] == True:
-                        ftp_session.delete(filename)
-                        delete_done = True
+                        try:
+                            ftp_session.delete(filename)
+                            delete_done = True
+                        except Exception:
+                            ctypes.windll.user32.MessageBoxW(0, "Failed to delete " + filename, "Error", 0)
                 if delete_done is True:
                     gui.Popup('Delete done', keep_on_top = True)
                     delete_done = False
@@ -133,6 +143,7 @@ def open_saved_data_page():
                 break
         saved_data_window.close()
     else:
+        saved_servers = {}
         saved_data_layout = [[gui.Button('SELECT ALL'), gui.Button('DESELECT ALL')]]
         try:
             with open('saved_servers.csv', 'r') as file:

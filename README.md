@@ -19,3 +19,4 @@ A simple and light FTP client with every basic functionality you might need.
 
 # Notes
 * At the moment, the client does not manage folders
+* Uses [FreeSimpleGUI](https://github.com/spyoungtech/FreeSimpleGUI), a maintained free fork of PySimpleGUI
